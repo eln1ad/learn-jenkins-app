@@ -2,25 +2,39 @@ pipeline {
     agent any
 
     stages {
-        // stage('Build') {
-        //     agent {
-        //         docker {
-        //             image 'node:18-alpine'
-        //             reuseNode true
-        //         }
-        //     }
+        stage('Clean') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                    reuseNode true
+                }
+            }
 
-        //     steps {
-        //         sh '''
-        //             ls -la
-        //             node --version
-        //             npm --version
-        //             npm ci
-        //             npm run build
-        //             ls -la
-        //         '''
-        //     }
-        // }
+            steps {
+                sh '''
+                    node --version
+                    npm --version
+                    rm -rf node_modules
+                    npm cache clean --force
+                '''
+            }
+        }
+
+        stage('Build') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                    reuseNode true
+                }
+            }
+
+            steps {
+                sh '''
+                    npm ci
+                    npm run build
+                '''
+            }
+        }
 
         stage('Test') {
             agent {
@@ -31,7 +45,6 @@ pipeline {
             }
             steps {
                 sh '''
-                    # echo "Test stage"
                     # test -f build/index.html
                     npm test
                 '''
@@ -58,6 +71,7 @@ pipeline {
 
     post{
         always {
+            junit 'jest-results/junit.xml'
             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright - HTML Report', reportTitles: '', useWrapperFileDirectly: true])
         }
     }
